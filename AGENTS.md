@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+# Design system
+
+UI를 작성하기 전에 `DESIGN.md`(Raycast)를 참고한다. 컬러·타이포·컴포넌트 패턴은 `app/globals.css` 토큰과 일치시킨다.
