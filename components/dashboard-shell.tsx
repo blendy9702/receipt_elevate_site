@@ -5,10 +5,10 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { PlaceWorkspace } from "@/components/place-workspace";
+import { ScreenManage } from "@/components/screen-manage";
 import { notificationCopy } from "@/lib/notification-copy";
 import type {
   ChildAccount,
-  HiddenPlacesResponse,
   NotificationItem,
   NotificationsResponse,
   PlaceItem,
@@ -36,7 +36,7 @@ const NAV_ITEMS: Array<{ id: View; label: string; icon: IconName }> = [
   { id: "tickets", label: "이용권", icon: "ticket" },
   { id: "notifications", label: "알림", icon: "bell" },
   { id: "team", label: "하위 계정", icon: "users" },
-  { id: "settings", label: "화면 설정", icon: "sliders" },
+  { id: "settings", label: "화면 관리", icon: "eye" },
 ];
 
 type IconName =
@@ -182,8 +182,6 @@ export function DashboardShell() {
   const [tickets, setTickets] = useState<TicketsBalanceResponse>({});
   const [ledger, setLedger] = useState<TicketsLedgerResponse>({});
   const [notifications, setNotifications] = useState<NotificationsResponse>({});
-  const [hiddenSettings, setHiddenSettings] = useState<HiddenPlacesResponse | null>(null);
-  const [savingSettings, setSavingSettings] = useState(false);
   const [children, setChildren] = useState<ChildAccount[]>([]);
   const [teamAvailable, setTeamAvailable] = useState<boolean | null>(null);
   const [allowedPlaces, setAllowedPlaces] = useState<TeamPlace[]>([]);
@@ -257,15 +255,6 @@ export function DashboardShell() {
     }
   };
 
-  const loadPreferences = async () => {
-    const response = await fetch("/api/preferences/hidden-places", {
-      cache: "no-store",
-    });
-    if (response.ok) {
-      setHiddenSettings((await response.json()) as HiddenPlacesResponse);
-    }
-  };
-
   const loadTeam = async () => {
     const [childrenResponse, placesResponse] = await Promise.all([
       fetch("/api/team/children", { cache: "no-store" }),
@@ -286,7 +275,7 @@ export function DashboardShell() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      void Promise.all([loadDashboard(), loadPreferences(), loadTeam()]);
+      void Promise.all([loadDashboard(), loadTeam()]);
     }, 0);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -356,25 +345,6 @@ export function DashboardShell() {
         items: current.items?.map((item) => ({ ...item, is_read: true })),
       }));
     }
-  };
-
-  const toggleHidden = async (alias: string) => {
-    if (!hiddenSettings) return;
-    setSavingSettings(true);
-    const current = new Set(hiddenSettings.user_hidden ?? []);
-    if (current.has(alias)) current.delete(alias);
-    else current.add(alias);
-    const aliases = [...current];
-    const response = await fetch("/api/preferences/hidden-places", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ aliases, mode: "replace" }),
-    });
-    if (response.ok) {
-      setHiddenSettings({ ...hiddenSettings, user_hidden: aliases });
-      await loadDashboard(true);
-    }
-    setSavingSettings(false);
   };
 
   const chooseChild = async (child: ChildAccount) => {
@@ -568,10 +538,11 @@ export function DashboardShell() {
                 />
               ) : null}
               {view === "settings" ? (
-                <SettingsView
-                  settings={hiddenSettings}
-                  saving={savingSettings}
-                  onToggle={toggleHidden}
+                <ScreenManage
+                  onSaved={() => {
+                    void loadDashboard(true);
+                    setPlacesEpoch((current) => current + 1);
+                  }}
                 />
               ) : null}
             </motion.div>
@@ -864,43 +835,6 @@ function TeamView({
           ) : <div className="empty-panel"><Icon name="users" size={30} /><p>플레이스를 배정할 계정을 선택하세요.</p></div>}
         </section>
       </div>
-    </>
-  );
-}
-
-function SettingsView({
-  settings,
-  saving,
-  onToggle,
-}: {
-  settings: HiddenPlacesResponse | null;
-  saving: boolean;
-  onToggle: (alias: string) => Promise<void>;
-}) {
-  const hidden = new Set(settings?.user_hidden ?? []);
-  return (
-    <>
-      <SectionHeader eyebrow="PREFERENCES" title="화면 설정" description="숨긴 플레이스는 목록에서 제외됩니다." />
-      <section className="content-card settings-card">
-        <div className="settings-intro">
-          <span><Icon name="eye" /></span>
-          <div><h2>플레이스 표시 설정</h2><p>숨긴 플레이스는 데이터 삭제 없이 목록에서만 제외됩니다.</p></div>
-        </div>
-        {!settings ? <LoadingPanel /> : (
-          <div className="visibility-list">
-            {(settings.assigned_places ?? []).map((place) => {
-              const visible = !hidden.has(place.alias);
-              const globallyHidden = (settings.admin_hidden ?? []).includes(place.alias);
-              return (
-                <div key={place.alias}>
-                  <div><strong>{place.placename || place.alias}</strong>{globallyHidden ? <span>운영 정책으로 숨김</span> : null}</div>
-                  <button className={visible ? "on" : ""} disabled={saving || globallyHidden} onClick={() => void onToggle(place.alias)} aria-label={`${place.placename || place.alias} ${visible ? "숨기기" : "표시하기"}`}><i /></button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
     </>
   );
 }
