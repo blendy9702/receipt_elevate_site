@@ -23,6 +23,9 @@ export const EXTERNAL_API = {
   ticketsLedger:
     process.env.EXTERNAL_TICKETS_LEDGER_URL ??
     `${internalBase}/api/tickets/ledger`,
+  ticketsTransfer:
+    process.env.EXTERNAL_TICKETS_TRANSFER_URL ??
+    `${internalBase}/api/tickets/transfer`,
   notificationsMe:
     process.env.EXTERNAL_NOTIFICATIONS_ME_URL ??
     `${internalBase}/api/notifications/me`,

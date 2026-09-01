@@ -44,7 +44,10 @@ export function LoginForm() {
     <div className="login-shell">
       <div className="login-visual" aria-hidden>
         <Image src="/logo_2.png" alt="" width={170} height={170} priority />
-        <p>일의 흐름을<br />한 단계 높이다.</p>
+        <p>
+          일의 흐름을
+          <br />한 단계 높이다.
+        </p>
         <span>RECEIPT ELEVATE</span>
       </div>
       <motion.form
@@ -54,9 +57,14 @@ export function LoginForm() {
         transition={{ duration: 0.35 }}
         className="login-card"
       >
-        <Image src="/logo_1.png" alt="Elevate" width={180} height={48} priority />
-        <h1>다시 만나서 반가워요</h1>
-        <p>계정으로 로그인해 대시보드를 확인하세요.</p>
+        <Image
+          src="/logo_1.png"
+          alt="Elevate"
+          width={180}
+          height={48}
+          priority
+        />
+        <p className="py-2">계정으로 로그인해 대시보드를 확인하세요.</p>
 
         <label>
           아이디
@@ -81,14 +89,9 @@ export function LoginForm() {
           />
         </label>
 
-        {error ? (
-          <p className="login-error">{error}</p>
-        ) : null}
+        {error ? <p className="login-error">{error}</p> : null}
 
-        <button
-          type="submit"
-          disabled={loading}
-        >
+        <button type="submit" disabled={loading}>
           {loading ? "로그인 중…" : "로그인"}
         </button>
       </motion.form>
