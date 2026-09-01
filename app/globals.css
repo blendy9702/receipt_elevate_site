@@ -829,6 +829,132 @@ button {
   margin-bottom: 15px;
 }
 
+.toolbar-cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.icon-button {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  place-items: center;
+  border: 1px solid #e1e2e9;
+  border-radius: 12px;
+  background: white;
+  color: #6a5b88;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  border-color: #c9b7e6;
+  background: #f7f4fb;
+}
+
+.page-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6a6d7c;
+  font-size: 13px;
+}
+
+.page-size select {
+  height: 43px;
+  border: 1px solid #e1e2e9;
+  border-radius: 12px;
+  background: white;
+  padding: 0 12px;
+  color: var(--el-ink);
+}
+
+.list-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.list-pagination button {
+  height: 36px;
+  border: 1px solid #e1e2e9;
+  border-radius: 10px;
+  background: white;
+  padding: 0 14px;
+  color: #5b3f8a;
+  cursor: pointer;
+}
+
+.list-pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.list-pagination span {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.list-sentinel {
+  height: 1px;
+}
+
+.settings-block {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.settings-block label,
+.settings-inline label {
+  color: #292a37;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.settings-block p {
+  margin: 0;
+  color: #8a8c98;
+  font-size: 12px;
+}
+
+.settings-inline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings-block input[type="range"] {
+  width: 100%;
+  accent-color: #6750a4;
+}
+
+.sort-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sort-toggle button {
+  height: 42px;
+  border: 1px solid #e1e2e9;
+  border-radius: 12px;
+  background: white;
+  color: #5c5f6e;
+  cursor: pointer;
+}
+
+.sort-toggle button.active {
+  border-color: #c9b7e6;
+  background: #f0edf8;
+  color: #634994;
+  font-weight: 700;
+}
+
 .search-box {
   display: flex;
   width: min(420px, 100%);
@@ -1689,6 +1815,8 @@ button {
   .metric-card strong { font-size: 19px; }
   .content-card { padding: 20px 16px; }
   .toolbar { align-items: stretch; flex-direction: column; }
+  .toolbar-cluster { width: 100%; }
+  .search-box { width: 100%; }
   .segmented { align-self: flex-start; }
   .ticket-balance-grid { grid-template-columns: 1fr 1fr; gap: 9px; }
   .total-balance-card { grid-column: 1 / -1; }
@@ -1918,6 +2046,28 @@ button {
   padding: 12px 14px;
   color: #292a37;
   font: inherit;
+}
+
+.modal-field input[readonly],
+.modal-field input:disabled,
+.modal-field select:disabled {
+  background: #f4f4f7;
+  color: #8a8c98;
+}
+
+.place-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.field-hint {
+  margin: -6px 0 4px;
+  color: #8a8c98;
+  font-size: 12px;
+}
+
+.check-row.is-disabled {
+  color: #8a8c98;
 }
 
 .modal-textarea {

@@ -182,8 +182,6 @@ export function DashboardShell() {
   const [tickets, setTickets] = useState<TicketsBalanceResponse>({});
   const [ledger, setLedger] = useState<TicketsLedgerResponse>({});
   const [notifications, setNotifications] = useState<NotificationsResponse>({});
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "done">("all");
   const [hiddenSettings, setHiddenSettings] = useState<HiddenPlacesResponse | null>(null);
   const [savingSettings, setSavingSettings] = useState(false);
   const [children, setChildren] = useState<ChildAccount[]>([]);
@@ -194,6 +192,7 @@ export function DashboardShell() {
   const [savingTeam, setSavingTeam] = useState(false);
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [ticketServices, setTicketServices] = useState<TicketService[]>([]);
+  const [placesEpoch, setPlacesEpoch] = useState(0);
 
   const handleAuth = (responses: Response[]) => {
     if (responses.some((response) => response.status === 401)) {
@@ -301,6 +300,7 @@ export function DashboardShell() {
   const refresh = () => {
     startRefresh(() => {
       void loadDashboard(true);
+      setPlacesEpoch((current) => current + 1);
     });
   };
 
@@ -323,25 +323,6 @@ export function DashboardShell() {
     const remaining = Number(stats.remaining_workload ?? 0);
     return done + remaining > 0 ? (done / (done + remaining)) * 100 : 0;
   }, [stats]);
-
-  const filteredPlaces = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return places.filter((place) => {
-      const matchesQuery =
-        !normalized ||
-        [place.alias, place.name, place.mid]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(normalized));
-      const done = Number(place.remaining ?? 0) <= 0;
-      const active = Number(place.status ?? 1) === 1 && !done;
-      return (
-        matchesQuery &&
-        (statusFilter === "all" ||
-          (statusFilter === "active" && active) ||
-          (statusFilter === "done" && done))
-      );
-    });
-  }, [places, query, statusFilter]);
 
   const markRead = async (id: number) => {
     setNotifications((current) => ({
@@ -556,14 +537,12 @@ export function DashboardShell() {
               ) : null}
               {view === "places" ? (
                 <PlacesView
-                  loading={loading}
-                  places={filteredPlaces}
-                  total={places.length}
-                  query={query}
-                  setQuery={setQuery}
-                  filter={statusFilter}
-                  setFilter={setStatusFilter}
-                  onRefresh={() => loadDashboard(true)}
+                  total={Number(stats.registered_places ?? places.length)}
+                  reloadToken={placesEpoch}
+                  onRefresh={() => {
+                    void loadDashboard(true);
+                    setPlacesEpoch((current) => current + 1);
+                  }}
                 />
               ) : null}
               {view === "tickets" ? (
@@ -726,22 +705,12 @@ function Overview({
 }
 
 function PlacesView({
-  loading,
-  places,
   total,
-  query,
-  setQuery,
-  filter,
-  setFilter,
+  reloadToken,
   onRefresh,
 }: {
-  loading: boolean;
-  places: PlaceItem[];
   total: number;
-  query: string;
-  setQuery: (value: string) => void;
-  filter: "all" | "active" | "done";
-  setFilter: (value: "all" | "active" | "done") => void;
+  reloadToken: number;
   onRefresh: () => Promise<void> | void;
 }) {
   return (
@@ -751,15 +720,7 @@ function PlacesView({
         title="플레이스"
         description={`내게 배정된 플레이스 ${number(total)}곳`}
       />
-      <PlaceWorkspace
-        loading={loading}
-        places={places}
-        query={query}
-        setQuery={setQuery}
-        filter={filter}
-        setFilter={setFilter}
-        onRefresh={onRefresh}
-      />
+      <PlaceWorkspace reloadToken={reloadToken} onRefresh={onRefresh} />
     </>
   );
 }

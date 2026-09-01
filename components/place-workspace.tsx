@@ -9,6 +9,7 @@ import type {
   GoodthingUi,
   PlaceImage,
   PlaceItem,
+  PlaceDetail,
   PlacesResponse,
   ReviewJobItem,
   VisitInfo,
@@ -126,12 +127,14 @@ export function PlaceWorkspace({
   const [draftSortDir, setDraftSortDir] = useState<SortDir>("asc");
   const [draftBilling, setDraftBilling] = useState(false);
   const [draftInfinite, setDraftInfinite] = useState(500);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [openMenu, setOpenMenu] = useState<number | null>(null);
   const [modal, setModal] = useState<MenuAction | null>(null);
   const [active, setActive] = useState<PlaceItem | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [dailycap, setDailycap] = useState("");
+  const [placeDetail, setPlaceDetail] = useState<PlaceDetail | null>(null);
   const [reviews, setReviews] = useState<ReviewJobItem[]>([]);
   const [scripts, setScripts] = useState<AssignedScript[]>([]);
   const [scriptSort, setScriptSort] = useState<"asc" | "desc">("asc");
@@ -183,6 +186,7 @@ export function PlaceWorkspace({
     setShowBillingOwner(stored.show_billing_owner);
     setInfiniteLimit(loadMainInfiniteLimit());
     setPageSize(loadMainPageSize());
+    setSettingsReady(true);
   }, []);
 
   useEffect(() => {
@@ -245,9 +249,10 @@ export function PlaceWorkspace({
   }, [fetchPage, infiniteLimit, pageSize]);
 
   useEffect(() => {
+    if (!settingsReady) return;
     reloadList();
     return () => abortRef.current?.abort();
-  }, [reloadList, reloadToken]);
+  }, [reloadList, reloadToken, settingsReady]);
 
   useEffect(() => {
     if (listMode !== "infinite") return;
@@ -338,7 +343,17 @@ export function PlaceWorkspace({
       return;
     }
     setModal(action);
-    if (action === "dailycap") setDailycap(String(place.requested ?? place.dailycap ?? 0));
+    if (action === "dailycap") {
+      setPlaceDetail(null);
+      setDailycap("");
+      try {
+        const data = await apiJson<PlaceDetail>(`/api/upstream/place/${place.pid}`);
+        setPlaceDetail(data);
+        setDailycap(String(data.dailycap ?? 0));
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : "플레이스 정보를 불러오지 못했습니다.");
+      }
+    }
     if (action === "reviews") {
       setReviews([]);
       try {
@@ -397,6 +412,8 @@ export function PlaceWorkspace({
     setActive(null);
     setNotice(null);
     resetFiles();
+    setPlaceDetail(null);
+    setDailycap("");
   };
 
   const runJson = async (fn: () => Promise<void>, success: string) => {
@@ -673,9 +690,9 @@ export function PlaceWorkspace({
                 </tr>
               </thead>
               <tbody>
-                {places.map((place, index) => (
+                {displayedPlaces.map((place, index) => (
                   <tr key={place.pid} className={placeRowClass(place)}>
-                    <td>{index + 1}</td>
+                    <td>{(listMode === "paged" ? pagedOffset : 0) + index + 1}</td>
                     <td>{place.name || place.alias || "—"}</td>
                     <td className="mid-col">{place.mid || "—"}</td>
                     <td>{number(place.done)}</td>
@@ -686,7 +703,7 @@ export function PlaceWorkspace({
                     <td>{number(place.amount ?? place.total)}</td>
                     <td>{formatStartDate(place.start_date)}</td>
                     <td>{number(place.today)} / {number(place.requested)}</td>
-                    <td>{place.billing_owner_display || "—"}</td>
+                    {showBillingOwner ? <td>{place.billing_owner_display || "—"}</td> : null}
                     <td className="actions-col">
                       <div className="action-group">
                         <button className="table-action" onClick={() => void openAction(place, "reviews")}>
@@ -723,12 +740,79 @@ export function PlaceWorkspace({
                 ))}
               </tbody>
             </table>
-            {!places.length ? (
-              <div className="empty-panel"><p>조건에 맞는 플레이스가 없습니다.</p></div>
+            {!displayedPlaces.length && !loading ? (
+              <div className="empty-panel"><p>{listError || "조건에 맞는 플레이스가 없습니다."}</p></div>
             ) : null}
+            {listMode === "infinite" ? <div ref={sentinelRef} className="list-sentinel" /> : null}
           </div>
         )}
       </div>
+      {listMode === "paged" ? (
+        <div className="list-pagination">
+          <button
+            type="button"
+            disabled={pagedOffset <= 0 || loading}
+            onClick={() => void fetchPage({ offset: Math.max(0, pagedOffset - Number(pageSize)), limit: Number(pageSize), append: false })}
+          >
+            이전
+          </button>
+          <span>{Math.floor(pagedOffset / Math.max(1, Number(pageSize))) + 1}</span>
+          <button
+            type="button"
+            disabled={!hasMore || loading}
+            onClick={() => void fetchPage({ offset: pagedOffset + Number(pageSize), limit: Number(pageSize), append: false })}
+          >
+            다음
+          </button>
+        </div>
+      ) : null}
+
+      {settingsOpen ? (
+        <div className="modal-scrim" onClick={() => setSettingsOpen(false)}>
+          <div className="app-modal" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <p>목록</p>
+                <h2>메인 목록 설정</h2>
+              </div>
+              <button onClick={() => setSettingsOpen(false)} aria-label="닫기">닫기</button>
+            </header>
+            <div className="app-modal-body">
+              <div className="settings-block">
+                <label>정렬 순서</label>
+                <p>(정렬 기준은 기본적으로 ID(등록 순서)입니다.)</p>
+                <div className="sort-toggle">
+                  <button type="button" className={draftSortDir === "asc" ? "active" : ""} onClick={() => setDraftSortDir("asc")}>오름차순</button>
+                  <button type="button" className={draftSortDir === "desc" ? "active" : ""} onClick={() => setDraftSortDir("desc")}>내림차순</button>
+                </div>
+              </div>
+              <div className="settings-block">
+                <div className="settings-inline">
+                  <label>페이지 로딩 개수</label>
+                  <span>{draftInfinite}개</span>
+                </div>
+                <input
+                  type="range"
+                  min={200}
+                  max={1000}
+                  step={100}
+                  value={draftInfinite}
+                  onChange={(event) => setDraftInfinite(normalizeInfiniteLimit(event.target.value))}
+                />
+                <p>스크롤로 추가 로딩될 때 한 번에 불러오는 개수입니다. (200~1000, 100단위)</p>
+              </div>
+              <label className="check-row">
+                <input type="checkbox" checked={draftBilling} onChange={(event) => setDraftBilling(event.target.checked)} />
+                결제자 표시
+              </label>
+            </div>
+            <footer>
+              <button className="ghost" onClick={() => setSettingsOpen(false)}>닫기</button>
+              <button className="solid-button" onClick={saveSettings}>저장</button>
+            </footer>
+          </div>
+        </div>
+      ) : null}
 
       {modal && active ? (
         <div className="modal-scrim" onClick={closeModal}>
@@ -795,10 +879,64 @@ export function PlaceWorkspace({
               ) : null}
 
               {modal === "dailycap" ? (
-                <label className="modal-field">
-                  일일 발행량 (0 ~ {number(active.amount)})
-                  <input type="number" min={0} max={active.amount} value={dailycap} onChange={(event) => setDailycap(event.target.value)} />
-                </label>
+                placeDetail ? (
+                  <div className="place-edit-form">
+                    <label className="modal-field">
+                      플레이스 별명
+                      <input readOnly value={placeDetail.alias ?? ""} />
+                    </label>
+                    <label className="modal-field">
+                      플레이스 MID
+                      <input readOnly value={placeDetail.placekey ?? ""} />
+                    </label>
+                    <label className="modal-field">
+                      플레이스명(검색용)
+                      <input readOnly value={placeDetail.placename ?? ""} />
+                    </label>
+                    <label className="modal-field">
+                      주소
+                      <input readOnly value={placeDetail.address ?? ""} />
+                    </label>
+                    <label className="modal-field">
+                      영수증 인식 오류 수
+                      <input readOnly value={String(placeDetail.error_count ?? 0)} />
+                    </label>
+                    <label className="modal-field">
+                      일일 발행 개수
+                      <input
+                        type="number"
+                        min={0}
+                        max={Number(placeDetail.amount ?? 0)}
+                        step={1}
+                        value={dailycap}
+                        onChange={(event) => setDailycap(event.target.value)}
+                      />
+                    </label>
+                    <p className="field-hint">0 이상 {number(placeDetail.amount)} 이하의 정수만 저장됩니다.</p>
+                    <label className="modal-field">
+                      총 리뷰 개수
+                      <input readOnly value={String(placeDetail.amount ?? 0)} />
+                    </label>
+                    <label className="check-row is-disabled">
+                      <input type="checkbox" checked={Boolean(placeDetail.photo_allowed)} disabled />
+                      사진 허용
+                    </label>
+                    <label className="check-row is-disabled">
+                      <input type="checkbox" checked={Boolean(placeDetail.auto_post)} disabled />
+                      자동 발행
+                    </label>
+                    <label className="modal-field">
+                      발행 시작일
+                      <input type="date" readOnly value={String(placeDetail.start_date || "").slice(0, 10)} />
+                    </label>
+                    <label className="modal-field">
+                      [옵션]플레이스명(실제 이름)
+                      <input readOnly value={placeDetail.rplacename ?? ""} />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="compact-empty">플레이스 정보를 불러오는 중…</div>
+                )
               ) : null}
 
               {modal === "issue" ? (
@@ -1115,20 +1253,29 @@ export function PlaceWorkspace({
 
             {modal !== "reviews" && modal !== "scripts" && modal !== "goodthing" && modal !== "photos" ? (
               <footer>
-                <button className="ghost" onClick={closeModal}>취소</button>
+                <button className="ghost" onClick={closeModal}>{modal === "dailycap" ? "닫기" : "취소"}</button>
                 <button
                   className="solid-button"
-                  disabled={busy}
+                  disabled={busy || (modal === "dailycap" && !placeDetail)}
                   onClick={() => {
                     if (!active) return;
                     if (modal === "dailycap") {
+                      const max = Number(placeDetail?.amount ?? 0);
+                      const value = Number.parseInt(String(dailycap).trim(), 10);
+                      if (!Number.isInteger(value) || value < 0 || value > max) {
+                        setNotice(`일일 발행 개수는 0 이상 ${max} 이하의 정수여야 합니다.`);
+                        return;
+                      }
                       void runJson(async () => {
                         await apiJson(`/api/upstream/place/${active.pid}/dailycap`, {
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ dailycap: Number(dailycap) }),
+                          body: JSON.stringify({ dailycap: value }),
                         });
-                      }, "일일 발행량을 저장했습니다.");
+                        setPlaceDetail((current) =>
+                          current ? { ...current, dailycap: value } : current,
+                        );
+                      }, "일일 발행 개수를 수정했습니다.");
                     }
                     if (modal === "issue") {
                       void runJson(async () => {
@@ -1195,7 +1342,7 @@ export function PlaceWorkspace({
                     }
                   }}
                 >
-                  {busy ? "처리 중" : "확인"}
+                  {busy ? "처리 중" : modal === "dailycap" ? "저장" : "확인"}
                 </button>
               </footer>
             ) : null}

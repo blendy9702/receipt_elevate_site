@@ -116,6 +116,22 @@ export type VisitInfo = {
   };
 };
 
+export type PlaceDetail = {
+  id: number;
+  alias?: string | null;
+  placename?: string | null;
+  rplacename?: string | null;
+  placekey?: string | null;
+  address?: string | null;
+  error_count?: number | null;
+  dailycap?: number | null;
+  amount?: number | null;
+  photo_allowed?: boolean | number | null;
+  auto_post?: boolean | number | null;
+  start_date?: string | null;
+  status?: number | null;
+};
+
 export type PlacesResponse = {
   success?: boolean;
   items?: PlaceItem[];
