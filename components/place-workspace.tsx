@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import type {
   AssignedReceipt,
   AssignedScript,
@@ -720,19 +720,28 @@ export function PlaceWorkspace({
                           >
                             메뉴
                           </button>
-                          {openMenu === place.pid ? (
-                            <div className="place-menu" onClick={(event) => event.stopPropagation()}>
-                              {menuItems(place).map(([id, label]) => (
-                                <button
-                                  key={id}
-                                  className={id === "purge" || id === "purgeScripts" || (id === "issue" && Number(place.status ?? 1) !== 0) ? "danger" : ""}
-                                  onClick={() => void openAction(place, id)}
-                                >
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                          ) : null}
+                          <AnimatePresence>
+                            {openMenu === place.pid ? (
+                              <motion.div
+                                className="place-menu"
+                                initial={{ opacity: 0, y: -6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -6 }}
+                                transition={{ duration: 0.16, ease: "easeOut" }}
+                                onClick={(event) => event.stopPropagation()}
+                              >
+                                {menuItems(place).map(([id, label]) => (
+                                  <button
+                                    key={id}
+                                    className={id === "purge" || id === "purgeScripts" || (id === "issue" && Number(place.status ?? 1) !== 0) ? "danger" : ""}
+                                    onClick={() => void openAction(place, id)}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </motion.div>
+                            ) : null}
+                          </AnimatePresence>
                         </div>
                       </div>
                     </td>

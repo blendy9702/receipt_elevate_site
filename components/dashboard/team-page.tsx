@@ -124,7 +124,6 @@ export function TeamPage() {
                 className={selected?.id === child.id ? "active" : ""}
                 onClick={() => void chooseChild(child)}
               >
-                <span className="child-avatar">{child.username.slice(0, 1).toUpperCase()}</span>
                 <div>
                   <strong>{child.username}</strong>
                   <span>플레이스 {number(child.assigned_count)}곳</span>
